@@ -40,9 +40,11 @@ from . import bretschneider2016lol
 
 def get_datasets():
     return [
+        # if I only want to unify/download e.g. english ones to one file, I would have to comment out the others
+        # TODO add functionality to download datasets by language
         ousidhoum2019.Ousidhoum2019(),
         mulki2019.Mulki2019(),
-        mubarak2017twitter.Mubarak2017twitter(),
+        mubarak2017twitter.Mubarak2017twitter(), # download from website fails sometimes
         mubarak2017aljazeera.Mubarak2017aljazeera(),
         davidson2017.Davidson2017(),
         gibert2018.Gibert2018(),
@@ -58,7 +60,7 @@ def get_datasets():
         bretschneider2017.Bretschneider2017(),
         ross2017.Ross2017(),
         wiegand2018.Wiegand2018(),
-        pitenis2020.Pitenis2020(),
+        #pitenis2020.Pitenis2020(), # dataset not available here anymore
         mathur2018.Mathur2018(),
         alfina2017.Alfina2017(),
         ibrohim2019.Ibrohim2019(),

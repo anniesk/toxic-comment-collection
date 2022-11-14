@@ -14,6 +14,9 @@ import ast
 from io import BytesIO
 from urllib.request import urlopen
 from twarc import Twarc
+from twarc.client2 import Twarc2
+import json
+import numpy as np
 
 
 def download_from(url : str, destination_file : str) -> str:
@@ -215,27 +218,39 @@ def download_tweets_for_csv(file_name : str, column : str, api_data: Dict) -> st
         Returns path to the resulting file.
     """
     def hydrate(row, translation, columns):
-        if str(row[column]) in translation:
+        if str(row[column]) in translation: # if id from file is in the translation, we add the text from it and drop id column
             row["text"] = translation[row[column]]
             row = row.drop(column)
             return row
-        else:
-            ser = pd.Series(index=columns)
-            ser = ser.drop(column)
-            return ser
+        else:                     # if the id from og is not found in translated tweets, make new series that includes everything from og column but delete id
+            row["text"] = np.nan 
+            row = row.drop(column)
+            return row
 
     new_file = file_name + "_with_tweets"
     df = pd.read_csv(file_name, dtype={column: str})
-    t = Twarc(
+    t = Twarc2( # Twarc
         api_data["twitter"]["consumer_key"],
         api_data["twitter"]["consumer_secret"],
         api_data["twitter"]["access_token"],
         api_data["twitter"]["access_token_secret"]
         )
     translation = {}
-    for tweet in t.hydrate(df[column]):
-        translation[str(tweet["id"])] = tweet["full_text"]
-    df = df.apply(hydrate, axis=1, args=(translation,df.columns)).dropna(how='all')
+
+    # check if an id is wrong because some datasets have not int id, but scientific format floats
+    droplist = []
+    for i in range(len(df[column])):
+        if df[column][i].isnumeric() == False:
+            print(df[column][i])
+            df[column][i] = float(df[column][i])
+
+    for tweet in t.tweet_lookup(df[column]):
+        if "data" in tweet:
+            for i in range(len(tweet["data"])):
+                # functionality for if a tweet is deleted, privatized, or the user is suspended
+                if "text" in tweet["data"][i]:
+                    translation[tweet["data"][i]["id"]] = tweet["data"][i]["text"] # full_text # here translation has the id as key and text as value
+    df = df.apply(hydrate, axis=1, args=(translation,df.columns)).dropna(how='any') # change from all to any (if text has NA the row is dropped)
     df.to_csv(new_file, index=False, quoting=csv.QUOTE_NONNUMERIC)
     return new_file
 
